@@ -156,7 +156,7 @@ $batcache['headers']['X-nananana'] = 'Batcache';
 unset( $_batcache_script_name );
 
 // VIP Quickstart: Fix module activation
-$_GET['module'] = $_module;
+//$_GET['module'] = $_module;
 
 // UNCOMMENT THIS LINE TO DISABLE batcache -- KEEP THIS LAST
 // $batcache['max_age'] = 0;

@@ -28,5 +28,5 @@ Gemfile.lock
 www/wp-content/debug.log
 
 # qz repos
-qzwordpress
-qzapp
+www/qzwordpress
+www/qzapp

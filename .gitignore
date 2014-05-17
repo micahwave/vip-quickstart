@@ -23,3 +23,7 @@
 
 # Logs
 www/wp-content/debug.log
+
+# qz repos
+qzwordpress
+qzapp

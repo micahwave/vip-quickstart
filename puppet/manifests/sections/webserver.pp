@@ -11,6 +11,6 @@ nginx::vhost { 'qz.dev':
 }
 
 nginx::vhost { 'app.qz.dev':
-  docroot  => '/srv/www/app',
+  docroot  => '/srv/www/qzapp',
   template => 'nginx/vip.dev.erb',
 }

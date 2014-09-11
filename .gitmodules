@@ -17,6 +17,7 @@
 [submodule "puppet/modules/wp"]
 	path = puppet/modules/wp
 	url = https://github.com/joshbetz/puppet-wp.git
+	ignore = dirty
 [submodule "puppet/modules/ufw"]
 	path = puppet/modules/ufw
 	url = https://github.com/anl/puppet-ufw

@@ -13,6 +13,7 @@
 [submodule "puppet/modules/nginx"]
 	path = puppet/modules/nginx
 	url = https://github.com/example42/puppet-nginx.git
+	ignore = dirty
 [submodule "puppet/modules/wp"]
 	path = puppet/modules/wp
 	url = https://github.com/joshbetz/puppet-wp.git

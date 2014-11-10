@@ -20,7 +20,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.hostname = 'vip.local'
   config.vm.network :private_network, ip: "10.86.73.80"
 
-<<<<<<< HEAD
   # Use 1GB of memory in virtualbox
   config.vm.provider "virtualbox" do |v|
     v.memory = 1024
@@ -31,10 +30,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     v.memory = 1024
   end
 
-  config.vm.synced_folder ".", "/srv"
-=======
   config.vm.synced_folder ".", "/srv", :nfs => true
->>>>>>> Making some qz specific changes.
 
   # Address a bug in an older version of Puppet
   # See http://stackoverflow.com/questions/10894661/augeas-support-on-my-vagrant-machine

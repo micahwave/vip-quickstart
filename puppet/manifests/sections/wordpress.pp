@@ -4,10 +4,14 @@ $plugins = [
   'debug-bar-cron',
   'debug-bar-extender',
   'debug-bar-slow-actions',
+  'debug-bar-query-count-alert',
+  'debug-bar-remote-requests',
   'log-deprecated-notices',
   'log-viewer',
   'monster-widget',
+  'query-monitor',
   'user-switching',
+  'wordpress-importer',
 
   # WordPress.com
   'keyring',
@@ -22,7 +26,10 @@ $github_plugins = {
     # WordPress.com
     'jetpack'        => 'https://github.com/Automattic/jetpack',
     'media-explorer' => 'https://github.com/Automattic/media-explorer',
+    'writing-helper' => 'https://github.com/automattic/writing-helper',
 }
+
+include database::settings
 
 # Install WordPress
 exec { 'wp install /srv/www/wp':
@@ -40,7 +47,17 @@ exec { 'wp install /srv/www/wp':
 # Install GitHub Plugins
 $github_plugin_keys = keys( $github_plugins )
 gitplugin { $github_plugin_keys:
-    git_urls => $github_plugins
+    git_urls   => $github_plugins,
+}
+
+repomonitor_repo { '/srv/www/wp-content/plugins/vip-scanner':
+  repo_name => 'VIP Scanner',
+  require   => Gitplugin[$github_plugin_keys]
+}
+
+repomonitor_repo { '/srv/www/wp-content/plugins/jetpack':
+  repo_name => 'Jetpack',
+  require   => Gitplugin[$github_plugin_keys]
 }
 
 # Install plugins
@@ -54,16 +71,6 @@ wp::plugin { $plugins:
   ]
 }
 
-# Install default theme
-exec { '/usr/bin/wp theme install twentyfourteen':
-  cwd     => '/srv/www/wp',
-  unless  => '/usr/bin/wp theme is-installed twentyfourteen',
-  require => [
-    Exec['wp install /srv/www/wp'],
-    File['/srv/www/wp-content/themes'],
-  ]
-}
-
 # Update all the plugins
 wp::command { 'plugin update --all':
   command  => 'plugin update --all',
@@ -71,11 +78,15 @@ wp::command { 'plugin update --all':
   require  => Exec['wp install /srv/www/wp'],
 }
 
-# Install WP-CLI
-class { 'wp::cli':
-  ensure  => installed,
-  version => '0.15',
+# Symlink db.php for Query Monitor
+file { '/srv/www/wp-content/db.php':
+  ensure  => 'link',
+  target  => 'plugins/query-monitor/wp-content/db.php',
+  require => Wp::Plugin['query-monitor']
 }
+
+# Install WP-CLI
+class { 'wp::cli': ensure  => installed }
 
 # Make sure the themes directory exists
 file { '/srv/www/wp-content/themes': ensure => 'directory' }
@@ -85,34 +96,73 @@ file { '/srv/www/wp-content/plugins': ensure => 'directory' }
 
 # VCS Checkout
 vcsrepo { '/srv/www/wp':
-  ensure   => 'present',
+  ensure   => latest,
   source   => 'http://core.svn.wordpress.org/trunk/',
   provider => svn,
 }
 
+repomonitor_repo { '/srv/www/wp':
+  repo_name => 'WordPress',
+  require   => Vcsrepo['/srv/www/wp']
+}
+
+cron { '/srv/www/wp':
+  command => '/usr/bin/svn up /srv/www/wp > /dev/null 2>&1',
+  hour    => '*/30',
+  user    => 'vagrant',
+}
+
 vcsrepo { '/srv/www/wp-content/themes/vip/plugins':
-  ensure   => 'present',
+  ensure   => latest,
   source   => 'https://vip-svn.wordpress.com/plugins/',
   provider => svn,
 }
 
-vcsrepo { '/srv/www/wp-content/themes/pub':
-  ensure   => 'present',
-  source   => 'https://wpcom-themes.svn.automattic.com/',
+repomonitor_repo { '/srv/www/wp-content/themes/vip/plugins':
+  repo_name => 'VIP Plugins',
+  require   => Vcsrepo['/srv/www/wp-content/themes/vip/plugins']
+}
+
+cron { '/srv/www/wp-content/themes/vip/plugins':
+  command => '/usr/bin/svn up /srv/www/wp-content/themes/vip/plugins > /dev/null 2>&1',
+  hour    => '*/30',
+  user    => 'vagrant',
+}
+
+vcsrepo { '/srv/www/wp-content/themes/pub/twentyfourteen':
+  ensure   => latest,
+  source   => 'https://wpcom-themes.svn.automattic.com/twentyfourteen',
   provider => svn,
 }
 
+repomonitor_repo { '/srv/www/wp-content/themes/pub/twentyfourteen':
+  repo_name => 'Twenty Fourteen',
+  require   => Vcsrepo['/srv/www/wp-content/themes/pub/twentyfourteen']
+}
+
 vcsrepo { '/srv/www/wp-tests':
-  ensure   => 'present',
+  ensure   => latest,
   source   => 'http://develop.svn.wordpress.org/trunk/',
   provider => svn,
+}
+
+repomonitor_repo { '/srv/www/wp-tests':
+  repo_name => 'WordPress Tests',
+  require   => Vcsrepo['/srv/www/wp-tests']
 }
 
 # Create a local config
 file { 'local-config.php':
   ensure => present,
   path   => '/srv/www/local-config.php',
-  notify => Exec['generate salts']
+  notify => Exec['local config header', 'generate salts']
+}
+
+# Add MySQL password created in database.pp to local config
+file_line { 'Add DB_PASSWORD to local-config.php':
+  line  => "define(\'DB_PASSWORD\', \'${database::settings::mysql_password}\');",
+  path  => '/srv/www/local-config.php',
+  match => 'DB_PASSWORD',
 }
 
 # Add default path to local WP-CLI config
@@ -129,7 +179,12 @@ if ( $quickstart_domain ) {
   }
 }
 
+exec { 'local config header':
+  command     => 'printf "<?php\n" > /srv/www/local-config.php;',
+  refreshonly => true
+}
+
 exec { 'generate salts':
-  command     => 'printf "<?php\n" > /srv/www/local-config.php; curl https://api.wordpress.org/secret-key/1.1/salt/ >> /srv/www/local-config.php',
+  command     => 'curl https://api.wordpress.org/secret-key/1.1/salt/ >> /srv/www/local-config.php',
   refreshonly => true
 }

@@ -13,13 +13,16 @@
 /www/wp-content/plugins
 /www/wp-content/themes
 /www/wp-content/uploads
+/www/wp-content/upgrade
+/www/wp-content/db.php
 /www/wp-content/local-sunrise.php
 
 # tests
+Gemfile.lock
 /www/wp-tests
 
-# phpMyAdmin
-/www/phpmyadmin
+# WP-CLI dev mode
+/wp-cli
 
 # Logs
 www/wp-content/debug.log
